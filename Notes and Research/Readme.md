@@ -49,3 +49,8 @@ All the mnist examples are under the [mnist_example](https://github.com/Jiaqing-
 1. [mnist_exe.py](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist_exe.py): Given an compiled ONNX model file, run the Execution Session only.
 2. [mnist_compile.py](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist_compile.py): Given an ONNX model file, run the Compilation Session only.
 3. [mnist_exe_plus.py](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist_exe_plus.py): Given an ONNX model file, run both Execution Session and Compilation Session and gives the final result.
+
+To run the mnist_compile.py and mnist_exe_plus.py, since the compiler needs to know where to find its runtime, you should set ONNX_MLIR_RUNTIME_DIR to proper path as shown in the following before running the python script.
+```
+export ONNX_MLIR_RUNTIME_DIR=../../build/Debug/lib
+```
