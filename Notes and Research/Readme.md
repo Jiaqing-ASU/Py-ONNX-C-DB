@@ -56,7 +56,6 @@ Using pybind, a C/C++ binary can be directly imported by the Python interpreter.
 cd <working directory>
 ln -s ../../build/Debug/lib/PyOnnxMlirCompiler.cpython-38-x86_64-linux-gnu.so
 ln -s ../../build/Debug/lib/PyRuntime.cpython-38-x86_64-linux-gnu.so
-ln -s ../../build/Debug/lib/PyRuntimePlus.cpython-38-x86_64-linux-gnu.so
 python3
 ```
 
