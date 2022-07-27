@@ -6,9 +6,7 @@ We implemented this function in onnx-mlir. We provide a Python interface to comp
 ### Running the PyOnnxMlirCompiler interface
 
 An ONNX model can be compiled directly using the `onnx-mlir -O3 --EmitLib` command.
-The resulting library can then be executed using Python as shown in the previous
-sections. At times, it might be convenient to also compile a model directly in Python.
-This section explores the Python methods to do so.
+The resulting library can then be executed using Python as shown in [onnx-mlir README](https://github.com/onnx/onnx-mlir/blob/main/docs/UsingPyRuntime.md). At times, it might be convenient to also compile a model directly in Python. We explores the Python methods to do so.
 
 ```python
 from PyOnnxMlirCompiler import OnnxMlirCompiler, OnnxMlirTarget, OnnxMlirOption
