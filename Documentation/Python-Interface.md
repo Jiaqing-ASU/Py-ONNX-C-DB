@@ -161,9 +161,9 @@ The design of onnx MLIR separates the compilation and operation of the model. We
 2. [PyRuntime](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist.py)
 3. [PyRuntimePlus](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist_exe_plus.py)
 
-## Story 3: Solve the thread safe issue for all interfaces (Ongoing)
+## Story 3: Solve the thread safe issue for all interfaces (Done)
 We have met an issue of onnx-mlir while working on the Python interface. The issue is that the later compilation will be still working under the first or previous set of optimizations. Here is an example:
-```
+```python
 copt1= OMCompilerOptions()
 copt1.opt_level = 3
 copt1.maccel = NNPA
@@ -180,22 +180,38 @@ One approach is to reset all options when starting the compile by creating a new
 
 Actually if we launch a process when compiling using the `onnx-mlir` exec as a target, it will work for multi-threading and multi-processing (that one always worked to begin with, the problem is only when sharing an address space as some parameters are shared among all threads, namely not thread private).
 
-The only think for multi-threading, is that right now onnx-mlir rely on `ONNX_MLIR_FLAG` which is a fixed name. So the user cannot set this value in one thread to the env variable of the current process, and not hope that another thread may do the same. The plan is to create a thread unique name, and add as a parameter to `onnx-mlir` a option to set a custom name.
+The only think for multi-threading, is that right now onnx-mlir rely on `ONNX_MLIR_FLAG` which is a fixed name. So the user cannot set this value in one thread to the env variable of the current process, and not hope that another thread may do the same. The approach is to create a thread unique name, and add as a parameter to `onnx-mlir` a option to set a custom name.
 
-Our plan is to have a custom env var name when we have multiple processes. We could add an option to read the env var name from the environment. This name (ONNX_MLIR_FLAG) is currently a [`extern const std::string OnnxMlirEnvOptionName`](https://github.com/onnx/onnx-mlir/blob/62de6adc89ea5c0cf8bc1f58857dfe74d589618c/src/Compiler/CompilerUtils.cpp). We could transform this as an option. One example like the env var we need: export and def.
+Our approach is to have a custom env var name when we have multiple processes. We could add an option to read the env var name from the environment. This name (ONNX_MLIR_FLAG) is currently a [`extern const std::string OnnxMlirEnvOptionName`](https://github.com/onnx/onnx-mlir/blob/62de6adc89ea5c0cf8bc1f58857dfe74d589618c/src/Compiler/CompilerUtils.cpp). We could transform this as an option. We export and define the new option:
+```cpp
+extern llvm::cl::opt<std::string> menvVarName;
+llvm::cl::opt<std::string> menvVarName("menvVarName",
+    llvm::cl::desc("Override default option env var OnnxMlirEnvOptionName: ONNX_MLIR_FLAGS"),
+    llvm::cl::value_desc("option env var"), llvm::cl::init("ONNX_MLIR_FLAGS"),
+    llvm::cl::cat(OnnxMlirOptions));
 ```
-extern llvm::cl::opt<std::string> mtriple;
-llvm::cl::opt<std::string> mtriple("mtriple",
-    llvm::cl::desc("Override target triple for module"),
-    llvm::cl::value_desc("LLVM target triple"), llvm::cl::cat(OnnxMlirOptions),
-    llvm::cl::ValueRequired);
+
+This new option can be supported as follows:
+```cpp
+void setTargetEnvVar(const std::string &envVarName) {
+  assert(envVarName != "" && "Expecting valid target envVarName description");
+  LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << "Set envVarName\"" << envVarName << "\"\n");
+  menvVarName = envVarName;
+}
+
+void clearTargetEnvVar() { menvVarName.clear(); }
+
+std::string getTargetEnvVarOption() {
+  return (menvVarName != "") ? "--menvVarName=" + menvVarName : "";
+}
 ```
-For example, we define —option-env-var with default value “ONNX_MLIR_FLAG". The options are formally taken care of in [onnx-mlir.cpp](https://github.com/onnx/onnx-mlir/blob/main/src/onnx-mlir.cpp#L61).
-```
-// Parse options from argc/argv and default ONNX_MLIR_FLAG env var.
+
+We define this new option env var with default value “ONNX_MLIR_FLAG". The options are formally taken care of in [onnx-mlir.cpp](https://github.com/onnx/onnx-mlir/blob/main/src/onnx-mlir.cpp#L61). We change the `OnnxMlirEnvOptionName` to `menvVarName` as follows.
+```cpp
+// Parse options from argc/argv and env var.
 llvm::cl::ParseCommandLineOptions(argc, argv,
-      "ONNX-MLIR modular optimizer driver\n", nullptr,
-      OnnxMlirEnvOptionName.c_str());
+    "ONNX-MLIR modular optimizer driver\n", nullptr,
+    menvVarName.c_str());
 ```
 Here, we need to give the ONNX_MLIR_FLAG name to the option processing. So, we have to process the options manually (argv) to see if we have an "—option-env-var” and pass it there. Once that is done, we can define a thread unique name for the env var and launch a process to compile using “onnx-mlir”.
 The process is launched as follows defined in [CompilerUtils.cpp](https://github.com/onnx/onnx-mlir/blob/62de6adc89ea5c0cf8bc1f58857dfe74d589618c/src/Compiler/CompilerUtils.cpp#L419) and we can do the same in [OnnxMlirCompiler.cpp](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/src/Compiler/OnnxMlirCompiler.cpp#L52).
