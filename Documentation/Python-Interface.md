@@ -156,10 +156,13 @@ defined by executing `onnx-mlir --help`. Notable values are:
 *  `emit_jni` to generate a Java jar file of the model.
 
 ## Story 2: Provide one interface which contains two kinds of functions: Compilation and Run (Done)
-The design of onnx MLIR separates the compilation and operation of the model. We understand that for some professional users, this design has many benefits. However, for other users, such a design has a certain threshold or will bring some confusion to users. In order to simplify the difficulty of users, we designed an interface to package the compilation and operation of the model. Currently, onnx MLIR can provide users with three types of interfaces. The following are examples of three types of interfaces.
-1. [PyOnnxMlirCompiler](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist_compile.py)
+The design of ONNX-MLIR separates the compilation and operation of the model. We understand that for some professional users, this design has many benefits. However, for other users, such a design has a certain threshold or will bring some confusion to users. In order to simplify the difficulty of users, we design an interface to package the compilation and operation of the model. The code to generate the package can be found in the [python-interface](https://github.com/Jiaqing-ASU/onnx-mlir/tree/python-interface/python-interface) folder.
+
+Currently, onnx MLIR can provide users with three types of interfaces. The following are examples of three types of interfaces.
+1. [PyOnnxMlirCompiler](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist-compile.py)
 2. [PyRuntime](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist.py)
-3. [PyRuntimePlus](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist_exe_plus.py)
+3. [PyOnnxMlirCompiler with PyRuntime](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist-compile-run.py)
+3. [PyRuntimePlus](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist-run.py)
 
 ## Story 3: Solve the thread safe issue for all interfaces (Done)
 We have met an issue of onnx-mlir while working on the Python interface. The issue is that the later compilation will be still working under the first or previous set of optimizations. Here is an example:
