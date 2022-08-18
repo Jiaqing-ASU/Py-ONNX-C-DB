@@ -217,7 +217,72 @@ llvm::cl::ParseCommandLineOptions(argc, argv,
     menvVarName.c_str());
 ```
 Here, we need to give the ONNX_MLIR_FLAG name to the option processing. So, we have to process the options manually (argv) to see if we have an "—option-env-var” and pass it there. Once that is done, we can define a thread unique name for the env var and launch a process to compile using “onnx-mlir”.
-The process is launched as follows defined in [CompilerUtils.cpp](https://github.com/onnx/onnx-mlir/blob/62de6adc89ea5c0cf8bc1f58857dfe74d589618c/src/Compiler/CompilerUtils.cpp#L419) and we can do the same in [OnnxMlirCompiler.cpp](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/src/Compiler/OnnxMlirCompiler.cpp#L52).
+The process is launched as follows defined in [CompilerUtils.cpp](https://github.com/onnx/onnx-mlir/blob/62de6adc89ea5c0cf8bc1f58857dfe74d589618c/src/Compiler/CompilerUtils.cpp#L419) and we can do the same in [OnnxMlirCompiler.cpp](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/src/Compiler/OnnxMlirCompiler.cpp#L52), which is as follows.
+```cpp
+ONNX_MLIR_EXPORT int64_t omCompileFromFileViaCommand(const char *inputFilename,
+    const char *outputBaseName, EmissionTargetType emissionTarget,
+    const char **outputFilename, const char *flags, const char **errorMessage) {
+  // Manually process the flags
+  // Save the result string vector after processing
+  std::vector<std::string> flagsVector;
+  // Use the same standard as std::isspace to define white space characters
+  const char delimiters[6] = {0x20, 0x0c, 0x0a, 0x0d, 0x09, 0x0b};
+  // Use strtok_r instead of strtok because strtok_r is thread safe
+  char *token;
+  char *buffer = new char[std::strlen(flags) + 1];
+  std::strcpy(buffer, flags);
+  char *rest = buffer;
+  while ((token = strtok_r(rest, delimiters, &rest)) != NULL) {
+    flagsVector.push_back(std::string(token));
+  }
+  // Use 'onnx-mlir' command to compile the model.
+  std::string onnxmlirPath = getToolPath("onnx-mlir");
+  struct Command onnxmlirCompile(
+      /*exePath=*/!onnxmlirPath.empty() ? onnxmlirPath : kOnnxmlirPath);
+  bool findCustomEnvFlags = false;
+  for (std::size_t i = 0; i < flagsVector.size(); i++) {
+    onnxmlirCompile.appendStr(flagsVector[i]);
+    if (flagsVector[i].find("-customEnvFlags") != std::string::npos) {
+      findCustomEnvFlags = true;
+    }
+  }
+  if (findCustomEnvFlags == false) {
+    onnxmlirCompile.appendStr(
+        "-customEnvFlags=" + std::string(inputFilename) + "Process");
+  }
+  int rc = onnxmlirCompile.exec();
+  if (rc == CompilerSuccess && outputFilename) {
+    // Copy Filename
+    std::string name = getTargetFilename(outputBaseName, emissionTarget);
+    *outputFilename = strdup(name.c_str());
+  }
+  return rc != 0 ? CompilerFailureInLLVMOpt : CompilerSuccess;
+}
+
+ONNX_MLIR_EXPORT int64_t omCompileFromFile(const char *inputFilename,
+    const char *outputBaseName, EmissionTargetType emissionTarget,
+    const char **outputFilename, const char **errorMessage) {
+  mlir::OwningOpRef<mlir::ModuleOp> module;
+  mlir::MLIRContext context;
+  registerDialects(context);
+
+  std::string internalErrorMessage;
+  int rc = processInputFile(
+      std::string(inputFilename), context, module, &internalErrorMessage);
+  if (rc != CompilerSuccess) {
+    if (errorMessage != NULL)
+      *errorMessage = strdup(internalErrorMessage.c_str());
+    return rc;
+  }
+  rc = compileModule(module, context, outputBaseName, emissionTarget);
+  if (rc == CompilerSuccess && outputFilename) {
+    // Copy Filename
+    std::string name = getTargetFilename(outputBaseName, emissionTarget);
+    *outputFilename = strdup(name.c_str());
+  }
+  return rc;
+}
+```
 
 ## Story 4: Provide pip installable packages (Ongoing)
 To make this Python package much easier for users to use, we are going to provide pip installable packages. We need to first create a simple setup.py and related functions to install a simple skeleton package. Verify it shows up on pip package list. And then we need to investigate how to detect and help users to install the pre-requested non-python library, mainly the onnx-mlir. Our Package pre-request onnx-mlir and if we cannot help users to install this, we should give appropriate error messages.
