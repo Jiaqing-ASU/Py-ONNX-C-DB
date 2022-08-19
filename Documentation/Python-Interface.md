@@ -164,6 +164,41 @@ Currently, onnx MLIR can provide users with three types of interfaces. The follo
 3. [PyOnnxMlirCompiler with PyRuntime](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist-compile-run.py)
 3. [PyRuntimePlus](https://github.com/Jiaqing-ASU/onnx-mlir/blob/python-interface/docs/mnist_example/mnist-run.py)
 
+To run the above examples, it is also needed to run the following commands to set up the environment under `docs/mnist_example` folder:
+
+```bash
+# ONNX_MLIR_ROOT points to the root of the onnx-mlir, 
+# under which the include and the build directory lies.
+export ONNX_MLIR_ROOT=$(pwd)/../..
+# Define the bin directory where onnx-mlir binary resides. Change only if you
+# have a non-standard install.
+export ONNX_MLIR_BIN=$ONNX_MLIR_ROOT/build/Debug/bin
+# Define the include directory where onnx-mlir runtime include files resides.
+# Change only if you have a non-standard install.
+export ONNX_MLIR_INCLUDE=$ONNX_MLIR_ROOT/include
+
+# Include ONNX-MLIR executable directories part of $PATH.
+export PATH=$ONNX_MLIR_ROOT/build/Debug/bin:$PATH
+
+# Compiler needs to know where to find its runtime. Set ONNX_MLIR_RUNTIME_DIR to proper path.
+export ONNX_MLIR_RUNTIME_DIR=../../build/Debug/lib
+```
+
+You may also simply execute `chmod +x update_env.sh` and `./update_env.sh` for the above commands.
+
+Beside including all the header files, to run the Python code through Python API such as `PyRuntime`, `PyRuntimePlus` and `PyOnnxMlirCompiler`, I also updated my environment variables as such:
+
+```bash
+# Copy the PyOnnxMlirCompiler shared library file
+cp ../../build/Debug/lib/PyOnnxMlirCompiler.cpython-38-x86_64-linux-gnu.so ./
+# Copy the PyRuntime shared library file
+cp ../../build/Debug/lib/PyRuntime.cpython-38-x86_64-linux-gnu.so ./
+# Use pip to install the PyRuntimePlus Python package
+pip install ../../python-interface/dist/PyRuntimePlus-0.1.tar.gz
+```
+
+You may also simply execute `chmod +x setup_python.sh` and `./setup_python.sh` for the above commands. Run all these two parts of commands directly in the docs/docs/mnist_example and everything should work fine.
+
 ## Story 3: Solve the thread safe issue for all interfaces (Done)
 We have met an issue of onnx-mlir while working on the Python interface. The issue is that the later compilation will be still working under the first or previous set of optimizations. Here is an example:
 ```python
