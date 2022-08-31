@@ -319,8 +319,127 @@ ONNX_MLIR_EXPORT int64_t omCompileFromFile(const char *inputFilename,
 }
 ```
 
-## Story 4: Provide pip installable packages (Ongoing)
-To make this Python package much easier for users to use, we are going to provide pip installable packages. We need to first create a simple setup.py and related functions to install a simple skeleton package. Verify it shows up on pip package list. And then we need to investigate how to detect and help users to install the pre-requested non-python library, mainly the onnx-mlir. Our Package pre-request onnx-mlir and if we cannot help users to install this, we should give appropriate error messages.
+## Story 4: Provide pip installable PyRuntimePlus Python package (Done)
+The design of ONNX-MLIR separates the compilation and operation of the model. We understand that for some professional users, this design has many benefits. However, for other users, such a design has a certain threshold or will bring some confusion to users. In order to simplify the difficulty of users and make this Python package much easier for users to use, we design an pip installable PyRuntimePlus Python package which contains the compilation and operation of the model. We first create a simple setup.py and related functions to install a simple skeleton package. The PyRuntimePlus Python Package can be found in [Pypi PyRuntimePlus 0.1](https://pypi.org/project/PyRuntimePlus/). You can also install PyRuntimePlus Python package manually. More details are provided in the [python-interface README](https://github.com/Jiaqing-ASU/onnx-mlir/tree/python-interface/python-interface).
 
-## Story 5: Display onnx-mlir model details and signatures in Python (Ongoing)
-At present, we can output instructions and related intermediate files(.bc files or .ll files) while running in onnx-mlir for users in Python. However, we need to further investigate Tensorflow and Pytoch to see what information those tools which users might be more familiar to can provide in the process of compiling models. We try to provide some similar or even more valuable information in the Python interfaces.
+The PyRuntimePlus API are as defined follows:
+```python
+class OMCompilerOption:
+
+    def set_target_triple(self,target_triple):
+        self.target_triple = target_triple
+    
+    def get_target_triple(self):
+        return(self.target_triple)
+    
+    def set_target_arch(self,target_arch):
+        self.target_arch = target_arch
+    
+    def get_target_arch(self):
+        return(self.target_arch)
+    
+    def set_target_cpu(self,target_cpu):
+        self.target_cpu = target_cpu
+    
+    def get_target_cpu(self):
+        return(self.target_cpu)
+    
+    def set_target_accel(self,target_accel):
+        self.target_accel = target_accel
+    
+    def get_target_accel(self):
+        return(self.target_accel)
+    
+    def set_opt_level(self,level):
+        self.opt_level = level
+    
+    def get_opt_level(self,level):
+        return(self.opt_level)
+
+    def set_opt_flag(self,opt_flag):
+        self.opt_flag = opt_flag
+    
+    def get_opt_flag(self):
+        return(self.opt_flag)
+
+    def set_llc_flag(self,llc_flag):
+        self.llc_flag = llc_flag
+    
+    def get_llc_flag(self):
+        return(self.llc_flag)
+
+    def set_llvm_flag(self,llvm_flag):
+        self.llvm_flag = llvm_flag
+    
+    def get_llvm_flag(self):
+        return(self.llvm_flag)
+    
+    def set_verbose(self,verbose):
+        self.verbose = verbose
+    
+    def get_verbose(self):
+        return(self.verbose)
+
+    def set_target(self,target):
+        self.target = target
+    
+    def get_target(self):
+        return(self.target)
+
+class OMSession:
+
+    def __init__(self,file):
+        self.file = file
+        self.compiler = OnnxMlirCompiler(file)
+    
+    def compile(self,option):
+        if(hasattr(self,"target_triple")):
+            self.compiler.set_option(OnnxMlirOption.target_triple, option.get_target_triple())
+        
+        if(hasattr(self,"target_arch")):
+            self.compiler.set_option(OnnxMlirOption.target_arch, option.get_target_arch())
+
+        if(hasattr(self,"target_cpu")):
+            self.compiler.set_option(OnnxMlirOption.target_cpu, option.get_target_cpu())
+
+        if(hasattr(self,"target_accel")):
+            self.compiler.set_option(OnnxMlirOption.target_accel, option.get_target_accel())
+
+        if(hasattr(self,"get_opt_level")):
+            self.compiler.set_option(OnnxMlirOption.opt_level, option.get_opt_level())
+
+        if(hasattr(self,"opt_flag")):
+            self.compiler.set_option(OnnxMlirOption.opt_flag, option.get_opt_flag())
+
+        if(hasattr(self,"llc_flag")):
+            self.compiler.set_option(OnnxMlirOption.llc_flag, option.get_llc_flag())
+
+        if(hasattr(self,"verbose")):
+            self.compiler.set_option(OnnxMlirOption.verbose, option.get_verbose())
+        
+        rc = self.compiler.compile(option.get_target(), OnnxMlirTarget.emit_lib)
+        self.output_file_name = self.compiler.get_output_file_name()
+        return rc
+    
+    def run(self,input):
+        if(hasattr(self,"session") == False):
+            self.session = ExecutionSession(self.output_file_name)
+        outputs = self.session.run([input])
+        return outputs
+    
+    def print_input_signature(self):
+        if(hasattr(self,"session") == False):
+            self.session = ExecutionSession(self.output_file_name)
+        print("input signature in json", self.session.input_signature())
+    
+    def print_output_signature(self):
+        if(hasattr(self,"session") == False):
+            self.session = ExecutionSession(self.output_file_name)
+        print("output signature in json",self.session.output_signature())
+```
+
+## Future Work 1:
+Current Python packages require users to have ONNX MLIR correctly installed. It would be interesting to investigate how to detect and help users to install the pre-requested ONNX MLIR and also other pre-requested libraries.
+
+## Future Work 2: Display more details in Python
+Current we can only display some basic information and parameters through the C interface (such as input and output signatures, intermediate files(.bc files or .ll files), etc.) since our Python interface is based on the Pybind11 of the C interface. It would be interesting to investigate how to provide users more valuable information via Python interfaces during the compilation process.
