@@ -438,7 +438,7 @@ class OMSession:
         print("output signature in json",self.session.output_signature())
 ```
 
-## Future Work 1:
+## Future Work 1: Help users to install pre-requested environment
 Current Python packages require users to have ONNX MLIR correctly installed. It would be interesting to investigate how to detect and help users to install the pre-requested ONNX MLIR and also other pre-requested libraries.
 
 ## Future Work 2: Display more details in Python
